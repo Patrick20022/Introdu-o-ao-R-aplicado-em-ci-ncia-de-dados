@@ -1,0 +1,122 @@
+---
+title: "Progresso de Vacinações US"
+author: "Professor: Diogo Tavares Robaina "
+date: "Aluno: Patrick Saul"
+output: html_document
+---
+```{r setup, include= FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Sobre a base de dados: 
+A base de dados "Progresso da Vacinação nos EUA" coleta informações sobre
+o progresso da vacinação nos Estados Unidos, a partir de dados coletados
+pelo CDC e disponibilizados pelo repositório do Our World in Data no
+GitHub. As informações incluem o número total de doses administradas, o
+número de pessoas que receberam pelo menos uma dose, o número de pessoas
+que completaram o protocolo de vacinação, além de informações diárias e
+acumuladas sobre a distribuição de vacinas em cada estado.
+
+[Aqui](https://www.kaggle.com/datasets/bumjunkoo/us-vaccination-progress) você encontra mais informações sobre o progresso da vacinação nos Estados Unidos e poderá fazer o dowload na sua máquina da base de dados.
+
+```{r, echo=TRUE,message=FALSE,warning=FALSE}
+
+# Instala os pacotes necessários
+install.packages(c("zoo", "dplyr", "ggplot2"), 
+                 repos = "http://cran.us.r-project.org",
+                 quiet = TRUE, 
+                 message = FALSE,
+                 warning = FALSE)
+
+# Carrega os pacotes necessários
+library(dplyr)
+library(zoo)
+library(ggplot2)
+
+```
+### Agora vamos carregar a base de dados 
+```{r, echo = TRUE}
+# Lê o arquivo csv
+df <- read.csv("C:/Users/patri/Downloads/us_state_vaccinations.csv", header = TRUE, sep = ",")
+# Exibe as primeiras 6 linhas do dataframe
+knitr::kable(head(df))
+```
+### Agora podemos iniciar a limpeza da base de dados
+```{r, echo = TRUE}
+# Preenche valores faltantes com a observação anterior
+df <- na.locf(df, na.rm = FALSE)
+
+# Preenche valores faltantes com 0, pois são os dados iniciais, dessa forma 0 é justo
+df[is.na(df)] <- 0
+
+# Exibe as primeiras 6 linhas do dataframe
+knitr::kable(head(df))
+```
+### Agora depois de carregar a base de dados e fazer a limpeza, podemos iniciar a nossa análise exploratória dos dados
+```{r, echo = TRUE}
+# Agrupa os dados por data e calcula a soma das pessoas totalmente vacinadas
+df_sum <- df %>%
+  group_by(date) %>%
+  summarize(total_fully_vaccinated = sum(people_fully_vaccinated, na.rm = TRUE))
+
+# Cria um gráfico de linha mostrando a evolução da quantidade de pessoas totalmente vacinadas
+ggplot(df_sum, aes(x = date, y = total_fully_vaccinated, group = 1)) +
+  geom_line() +
+  labs(title = "Progresso da vacinação nos EUA",
+       x = "Data",
+       y = "Pessoas totalmente vacinadas") +
+  theme_minimal()
+
+# Agrupa os dados por data e calcula a soma das pessoas vacinadas com pelo menos uma dose
+df_sum2 <- df %>%
+  group_by(date) %>%
+  summarize(total_vaccinated = sum(people_vaccinated, na.rm = TRUE))
+
+# Cria um gráfico de linha mostrando a evolução da quantidade de pessoas vacinadas com pelo menos uma dose
+ggplot(df_sum2, aes(x = date, y = total_vaccinated,group = 1)) +
+  geom_line() +
+  labs(title = "Progresso da vacinação nos EUA",
+       x = "Data",
+       y = "Pessoas vacinadas com pelo menos uma dose") +
+  theme_minimal()
+
+# Seleciona a última observação de cada estado e a coluna de pessoas totalmente vacinadas por 100 pessoas
+df_last <- df %>%
+  group_by(location) %>%
+  slice_tail(n = 1) %>%
+  select(location, people_fully_vaccinated_per_hundred)
+
+# Cria um gráfico de barras mostrando os 10 estados com maior porcentagem de pessoas totalmente vacinadas
+ggplot(head(arrange(df_last, desc(people_fully_vaccinated_per_hundred)), 10),
+       aes(x = people_fully_vaccinated_per_hundred, y = reorder(location, people_fully_vaccinated_per_hundred))) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title = "Estados com maior porcentagem de pessoas totalmente vacinadas",
+       x = "Pessoas totalmente vacinadas por 100 pessoas",
+       y = "Estado") +
+  theme_minimal()
+
+# Seleciona a última observação de cada estado e a coluna de pessoas vacinadas com pelo menos uma dose por 100 pessoas
+df_last2 <- df %>%
+  group_by(location) %>%
+  slice_tail(n = 1) %>%
+  select(location, people_vaccinated_per_hundred)
+
+#Cria um gráfico de barras mostrando os 10 estados com maior porcentagem de pessoas vacinadas com pelo menos uma dose
+ggplot(head(arrange(df_last2, desc(people_vaccinated_per_hundred)), 10),
+       aes(x = people_vaccinated_per_hundred, y = reorder(location, people_vaccinated_per_hundred))) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title = "Estados com maior porcentagem de pessoas totalmente vacinadas",
+       x = "Pessoas vacinadas com pelo menos uma dose por 100 pessoas",
+       y = "Estado") +
+  theme_minimal()
+```
+
+## References
+- [Importar/Exportar](https://www.ime.usp.br/~fmachado/MAE399/ManualR.nb.html) dados para o RStudio.
+
+- [group_by](https://pt.stackoverflow.com/questions/7527/como-consolidar-agregar-ou-agrupar-os-valores-em-uma-base-de-dados) no Rstudio.
+
+- [Plots](https://2engenheiros.com/2017/02/03/graficos-de-barra-no-r/) de gráfico de barras no RStudio.
+
+- [Lidando com dados faltantes no RStudio](https://lhmet.github.io/adar-ebook/lidando-com-dados-faltantes.html)
+
